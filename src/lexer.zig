@@ -1,13 +1,8 @@
 const std = @import("std");
-
 const util = @import("util.zig");
-
-const tranquility_token = @import("token.zig");
-const Token = tranquility_token.Token;
-const TokenType = tranquility_token.TokenType;
-
-const tranquility_span = @import("span.zig");
-const Span = tranquility_span.Span;
+const Token = @import("token.zig").Token;
+const TokenType = @import("token.zig").TokenType;
+const Span = @import("span.zig").Span;
 
 // Compile-time constant.
 const MAX_FILE_SIZE_BYTES = 1 * 1024 * 1024 * 1024; // 1 GB
@@ -28,9 +23,15 @@ pub const Lexer = struct {
         var tokens = std.ArrayList(Token).init(allocator);
         var input_buffer = std.ArrayList(u8).init(allocator);
 
+        // NOTE: Take ownership of the memory for the file path given to us.
+        // Even though the pointer is constant, the memory could still be
+        // modified from underneath us. Not necessarily a problem now, but
+        // it could lead to TOCTOU errors down the road.
+        const own_file_path = try util.own_str(allocator, file_path);
+
         return Lexer{
             .allocator = allocator,
-            .file_path = try util.own_str(allocator, file_path),
+            .file_path = own_file_path,
             .characters = undefined,
             .tokens = tokens,
             .input_buffer = input_buffer,
@@ -41,6 +42,8 @@ pub const Lexer = struct {
     }
 
     pub fn read_file(self: *this) !void {
+        // NOTE: readFileAlloc(...) returns a heap-allocated u8 slice that we
+        // are responsible for cleaning up.
         self.characters = try std.fs.cwd().readFileAlloc(self.allocator, self.file_path, MAX_FILE_SIZE_BYTES);
     }
 
@@ -116,7 +119,11 @@ pub const Lexer = struct {
             return;
         }
 
+        // NOTE: toOwnedSlice() returns a pointer to memory on the heap, so
+        // it is safe to give to a token to hold onto. The token will cleanup
+        // this memory when it's deinit() method is called.
         const token_value = try self.input_buffer.toOwnedSlice();
+
         var token: Token = undefined;
         if (std.mem.eql(u8, token_value, "var")) {
             token = self.make_token(TokenType.Var);

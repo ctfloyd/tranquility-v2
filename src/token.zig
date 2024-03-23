@@ -1,8 +1,6 @@
 const std = @import("std");
 const util = @import("util.zig");
-const tranquility_span = @import("span.zig");
-
-const Span = tranquility_span.Span;
+const Span = @import("span.zig").Span;
 
 pub const TokenType = enum {
     Var,

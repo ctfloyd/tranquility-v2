@@ -1,7 +1,7 @@
 const std = @import("std");
-
-const tranquility_lexer = @import("lexer.zig");
-const Lexer = tranquility_lexer.Lexer;
+const Lexer = @import("lexer.zig").Lexer;
+const Token = @import("token.zig").Token;
+const TokenType = @import("token.zig").TokenType;
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
