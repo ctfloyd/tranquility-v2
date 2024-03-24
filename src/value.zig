@@ -5,7 +5,7 @@ const util = @import("util.zig");
 const Object = @import("object.zig").Object;
 
 pub const Value = struct {
-    const this = @This();
+    const Self = @This();
 
     const Type = enum {
         Undefined,
@@ -112,53 +112,53 @@ pub const Value = struct {
         return Value.init_float(v);
     }
 
-    pub fn is_undefined(self: *const this) bool {
+    pub fn is_undefined(self: Self) bool {
         return self.type == Type.Undefined;
     }
 
-    pub fn is_null(self: *const this) bool {
+    pub fn is_null(self: Self) bool {
         return self.type == Type.Null;
     }
 
-    pub fn is_number(self: *const this) bool {
+    pub fn is_number(self: Self) bool {
         return self.type == Type.Number;
     }
 
-    pub fn is_string(self: *const this) bool {
+    pub fn is_string(self: Self) bool {
         return self.type == Type.String;
     }
 
-    pub fn is_boolean(self: *const this) bool {
+    pub fn is_boolean(self: Self) bool {
         return self.type == Type.Boolean;
     }
 
-    pub fn is_object(self: *const this) bool {
+    pub fn is_object(self: Self) bool {
         return self.type == Type.Object;
     }
 
-    pub fn as_double(self: *const this) f64 {
+    pub fn as_double(self: Self) f64 {
         std.debug.assert(self.is_number());
         return self.value.as_double;
     }
 
-    pub fn as_bool(self: *const this) bool {
+    pub fn as_bool(self: Self) bool {
         std.debug.assert(self.is_boolean());
         return self.value.as_bool;
     }
 
-    pub fn as_string(self: *const this) []const u8 {
+    pub fn as_string(self: Self) []const u8 {
         std.debug.assert(self.is_string());
         return self.value.as_string;
     }
 
-    pub fn as_object(self: *const this) *Object {
+    pub fn as_object(self: Self) *Object {
         std.debug.assert(self.is_object());
         return self.value.as_object;
     }
 
     // Creates a string on the heap with the string representation of the value.
-    // The caller is responsible for freeing this memory when it's done using it.
-    pub fn to_string(self: *const this, allocator: std.mem.Allocator) []const u8 {
+    // The caller is responsible for freeing Self memory when it's done using it.
+    pub fn to_string(self: Self, allocator: std.mem.Allocator) []const u8 {
         // The memory to give back to the caller. It's guranteed to be initialized
         // by the end of the method.
         var give_to_caller: ?[]u8 = null;

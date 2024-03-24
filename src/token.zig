@@ -17,7 +17,7 @@ pub const TokenType = enum {
 };
 
 pub const Token = struct {
-    const this = @This();
+    const Self = @This();
 
     token_type: TokenType,
     line_number: u32,
@@ -44,7 +44,7 @@ pub const Token = struct {
         return token;
     }
 
-    pub fn dump(self: *const this) void {
+    pub fn dump(self: Self) void {
         std.debug.print("Token[type = {s}, line = {}, start = {}, end = {}, value = {?s}]\n", .{
             @tagName(self.token_type),
             self.line_number,
@@ -54,7 +54,7 @@ pub const Token = struct {
         });
     }
 
-    pub fn deinit(self: *const this) void {
+    pub fn deinit(self: *Self) void {
         if (self.value != null and self.allocator != null) {
             self.allocator.?.free(self.value.?);
         }

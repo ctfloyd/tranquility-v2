@@ -40,6 +40,8 @@ pub fn main() !void {
     const str3 = v3.to_string(allocator);
     defer allocator.free(str3);
     std.debug.print("Value {s}\n", .{str3});
+
+    lexer.dump();
 }
 
 fn test_value_i32(alloc: std.mem.Allocator, value: i32) void {
@@ -73,5 +75,4 @@ fn test_value_string(alloc: std.mem.Allocator, value: []const u8) void {
 fn run(lexer: *Lexer) !void {
     try lexer.*.read_file();
     try lexer.*.tokenize();
-    lexer.*.dump();
 }
