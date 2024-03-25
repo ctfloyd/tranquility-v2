@@ -1,9 +1,14 @@
 const std = @import("std");
+
+const ast = @import("ast.zig");
 const Lexer = @import("lexer.zig").Lexer;
 const Token = @import("token.zig").Token;
 const TokenType = @import("token.zig").TokenType;
 const Value = @import("value.zig").Value;
-const Object = @import("object.zig").Object;
+const JsObject = @import("object.zig").JsObject;
+const Interpreter = @import("interpreter.zig").Interpreter;
+const Expression = @import("ast.zig").Expression;
+const AstNode = @import("ast.zig").AstNode;
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -11,11 +16,58 @@ pub fn main() !void {
 
     const allocator = gpa.allocator();
 
-    var lexer = try Lexer.init(allocator, "hello_world.js");
-    defer lexer.deinit();
+    //var lexer = try Lexer.init(allocator, "hello_world.js");
+    //defer lexer.deinit();
+    //try test_lexer(&lexer);
+    //test_values(allocator);
 
-    try run(&lexer);
+    test_ast(allocator);
+}
 
+fn test_ast(allocator: std.mem.Allocator) void {
+    var program = ast.Program.init(allocator);
+
+    var block = ast.BlockStatement.init(allocator);
+    var one_literal: Expression = .{ .Literal = ast.Literal.init(allocator, Value.init(1)) };
+    var two_literal: Expression = .{ .Literal = ast.Literal.init(allocator, Value.init(2)) };
+    var three_literal: Expression = .{ .Literal = ast.Literal.init(allocator, Value.init(3)) };
+    var one_be: Expression = .{ .BinaryExpression = ast.BinaryExpression.init(allocator, ast.BinaryOperation.Plus, one_literal, two_literal) };
+    var two_be: Expression = .{ .BinaryExpression = ast.BinaryExpression.init(allocator, ast.BinaryOperation.Plus, one_be, three_literal) };
+    var rs: AstNode = .{ .ReturnStatement = ast.ReturnStatement.init(allocator, two_be) };
+    block.append_child(rs);
+
+    var fdcl: AstNode = .{ .FunctionDeclaration = ast.FunctionDeclaration.init(allocator, "foo", .{ .BlockStatement = block }) };
+    std.debug.print("created block\n", .{});
+    program.append_child(fdcl);
+    var ce = .{ .Expression = .{ .CallExpression = ast.CallExpression.init(allocator, "foo") } };
+    program.append_child(ce);
+
+    var interpreter = Interpreter.init(allocator);
+    var scope_node: ast.ScopeNode = .{ .Program = program };
+    var result = interpreter.run(&scope_node);
+
+    var result_str = result.to_string(allocator);
+    std.debug.print("Interpreter returned {s}\n", .{result_str});
+
+    program.dump(allocator, 0);
+
+    defer {
+        allocator.free(result_str);
+        program.deinit();
+        block.deinit();
+        //interpreter.deinit();
+        //one_literal.deinit();
+        //two_literal.deinit();
+        //three_literal.deinit();
+        //'fdcl.deinit();
+        //ce.deinit();
+        //one_be.deinit();
+        //two_be.deinit();
+        rs.deinit();
+    }
+}
+
+fn test_values(allocator: std.mem.Allocator) void {
     test_value_i32(allocator, 1234);
     test_value_bool(allocator, true);
     test_value_double(allocator, 1234.5678);
@@ -31,7 +83,7 @@ pub fn main() !void {
     defer allocator.free(str2);
     std.debug.print("Value {s}\n", .{str2});
 
-    var obj = Object.init(allocator);
+    var obj = JsObject.init(allocator);
     defer obj.deinit();
     obj.put("property_one", v1);
     obj.put("property_two", v2);
@@ -40,8 +92,6 @@ pub fn main() !void {
     const str3 = v3.to_string(allocator);
     defer allocator.free(str3);
     std.debug.print("Value {s}\n", .{str3});
-
-    lexer.dump();
 }
 
 fn test_value_i32(alloc: std.mem.Allocator, value: i32) void {
@@ -72,7 +122,8 @@ fn test_value_string(alloc: std.mem.Allocator, value: []const u8) void {
     std.debug.print("Value {s}\n", .{str});
 }
 
-fn run(lexer: *Lexer) !void {
+fn test_lexer(lexer: *Lexer) !void {
     try lexer.*.read_file();
     try lexer.*.tokenize();
+    lexer.dump();
 }

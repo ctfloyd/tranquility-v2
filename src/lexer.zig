@@ -27,7 +27,7 @@ pub const Lexer = struct {
         // Even though the pointer is constant, the memory could still be
         // modified from underneath us. Not necessarily a problem now, but
         // it could lead to TOCTOU errors down the road.
-        const own_file_path = try util.own_str(allocator, file_path);
+        const own_file_path = util.own_str(allocator, file_path);
 
         return Lexer{
             .allocator = allocator,

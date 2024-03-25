@@ -3,6 +3,8 @@ const ZigType = @import("std").builtin.Type;
 
 const util = @import("util.zig");
 const Object = @import("object.zig").Object;
+const JsObject = @import("object.zig").JsObject;
+const Function = @import("function.zig").Function;
 
 pub const Value = struct {
     const Self = @This();
@@ -28,6 +30,7 @@ pub const Value = struct {
         return Value.init_type(Type.Undefined);
     }
 
+    // Value takes ownership of any pointer values given to it.
     pub fn init(value: anytype) Value {
         return switch (@typeInfo(@TypeOf(value))) {
             .Int => Value.init_int(value),
@@ -40,15 +43,14 @@ pub const Value = struct {
         };
     }
 
-    pub fn init_object(object: *Object) Value {
-        return .{ .type = Type.Object, .value = .{ .as_object = object } };
+    fn init_type(value_type: Type) Value {
+        return .{
+            .type = value_type,
+            .value = undefined,
+        };
     }
 
-    pub fn init_type(value_type: Type) Value {
-        return .{ .type = value_type, .value = undefined };
-    }
-
-    pub fn init_int(value: anytype) Value {
+    fn init_int(value: anytype) Value {
         const info = @typeInfo(@TypeOf(value));
         std.debug.assert(info.Int.bits <= 32);
 
@@ -58,7 +60,7 @@ pub const Value = struct {
         };
     }
 
-    pub fn init_float(value: anytype) Value {
+    fn init_float(value: anytype) Value {
         const info = @typeInfo(@TypeOf(value));
         std.debug.assert(info.Float.bits <= 64);
 
@@ -68,7 +70,7 @@ pub const Value = struct {
         };
     }
 
-    pub fn init_bool(value: anytype) Value {
+    fn init_bool(value: anytype) Value {
         std.debug.assert(@TypeOf(value) == bool);
         return .{
             .type = Type.Boolean,
@@ -76,9 +78,8 @@ pub const Value = struct {
         };
     }
 
-    pub fn init_pointer(value: anytype) Value {
+    fn init_pointer(value: anytype) Value {
         const info = @typeInfo(@TypeOf(value));
-
         if (info.Pointer.is_const and info.Pointer.child == u8) {
             return .{
                 .type = Type.String,
@@ -90,11 +91,10 @@ pub const Value = struct {
                 .value = .{ .as_object = value },
             };
         }
-
         unreachable;
     }
 
-    pub fn init_comptime_int(value: anytype) Value {
+    fn init_comptime_int(value: anytype) Value {
         std.debug.assert(@TypeOf(value) == comptime_int);
 
         // This is a safe cast, since the value is known at compile time, the
@@ -103,7 +103,7 @@ pub const Value = struct {
         return Value.init_int(v);
     }
 
-    pub fn init_comptime_float(value: anytype) Value {
+    fn init_comptime_float(value: anytype) Value {
         std.debug.assert(@TypeOf(value) == comptime_float);
 
         // This is a safe cast, since the value is known at compile time, the
@@ -189,7 +189,9 @@ pub const Value = struct {
         }
 
         if (self.is_object()) {
-            value = self.as_object().name();
+            value = switch (self.as_object().*) {
+                inline else => |*object| object.name(),
+            };
         }
 
         if (give_to_caller != null) {
