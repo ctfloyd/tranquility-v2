@@ -16,22 +16,16 @@ pub const Function = struct {
         const object = allocator.create(JsObject) catch @panic("OOM");
         object.* = JsObject.init(allocator);
 
-        const my_body = allocator.create(ScopeNode) catch @panic("OOM");
-        my_body.* = body.clone();
-
         return .{
             .allocator = allocator,
             .parent = object,
-            .function_name = own_str(allocator, function_name),
-            .body = my_body,
+            .function_name = function_name,
+            .body = body,
         };
     }
 
     pub fn deinit(self: *Self) void {
         self.parent.deinit();
-        self.body.deinit();
-        self.allocator.free(self.function_name);
-        self.allocator.destroy(self.body);
         self.allocator.destroy(self.parent);
     }
 

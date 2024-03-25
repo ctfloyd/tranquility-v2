@@ -25,6 +25,11 @@ pub const Value = struct {
         as_string: []const u8,
         as_object: *Object,
     },
+    // If this value was created as a side-effect of interpreting the abstract
+    // syntax tree, then we know that the interpreter is the only thing keeping
+    // an eye on this memory. If the interpreter is doing to discoard this value,
+    // then it should also free it.
+    interpreter_should_free: bool,
 
     pub inline fn make_undefined() Value {
         return Value.init_type(Type.Undefined);
@@ -47,6 +52,7 @@ pub const Value = struct {
         return .{
             .type = value_type,
             .value = undefined,
+            .interpreter_should_free = false,
         };
     }
 
@@ -57,6 +63,7 @@ pub const Value = struct {
         return .{
             .type = Type.Number,
             .value = .{ .as_double = @as(f64, @floatFromInt(value)) },
+            .interpreter_should_free = false,
         };
     }
 
@@ -67,6 +74,7 @@ pub const Value = struct {
         return .{
             .type = Type.Number,
             .value = .{ .as_double = value },
+            .interpreter_should_free = false,
         };
     }
 
@@ -75,6 +83,7 @@ pub const Value = struct {
         return .{
             .type = Type.Boolean,
             .value = .{ .as_bool = value },
+            .interpreter_should_free = false,
         };
     }
 
@@ -84,11 +93,13 @@ pub const Value = struct {
             return .{
                 .type = Type.String,
                 .value = .{ .as_string = value },
+                .interpreter_should_free = false,
             };
         } else if (info.Pointer.child == Object) {
             return .{
                 .type = Type.Object,
                 .value = .{ .as_object = value },
+                .interpreter_should_free = false,
             };
         }
         unreachable;
@@ -190,7 +201,8 @@ pub const Value = struct {
 
         if (self.is_object()) {
             value = switch (self.as_object().*) {
-                inline else => |*object| object.name(),
+                .JsObject => |*object| object.name(allocator),
+                .Function => |*object| object.name(),
             };
         }
 
